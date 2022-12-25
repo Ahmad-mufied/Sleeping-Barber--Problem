@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -44,10 +45,36 @@ func main() {
 
 
 	// start the barbershop as go routine
+	shopClosing := make(chan bool)
+	closed := make(chan bool)
+
+	go func() {
+		<-time.After(timeOpen)
+		shopClosing <- true
+		shop.closeShopForDay()
+		closed <- true
+
+	}()
 
 	// add clients
+	i := 1
+
+	go func() {
+		for {
+			// get a random number with average arival rate
+			randomMiliseonds := rand.Int() % (2 * arrivalRate)
+			select {
+			case <-shopClosing:
+				return
+			case <-time.After(time.Millisecond * time.Duration(randomMiliseonds)):
+				shop.addClient(fmt.Sprintf("Client #%d", i))
+				i++
+			}
+		}
+	}()
+
 
 	// block until the barbershop is closed
-	time.Sleep(5 * time.Second)
+	<-closed
 }
 
